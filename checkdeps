@@ -1,0 +1,33 @@
+#!/bin/bash
+pkgs=""
+files=""
+libs=""
+
+for file in $(qlist ${1}); do
+	[[ -x "${file}" && -f "${file}" ]] && files="${files} ${file}"
+done
+
+#echo $files
+
+#echo "libs:"
+
+for lib in $(echo ${files} | xargs ldd | grep "=>" | sed -re 's:\(.*\)\s*$::' | sed -re 's:^.*=>::' )
+do
+	libs="${libs}${lib} "\\n
+done
+
+libs=$(echo -e ${libs} | sort | uniq)
+
+#echo $libs
+
+for lib in ${libs}; do
+#	echo ${lib}
+	pkgs="${pkgs}$(qfile -qC ${lib} )"\\n
+done
+
+#echo "start"
+#echo $pkgs
+#echo "stop"
+
+echo -e $pkgs | head --lines=-1 | sort | uniq
+#echo -e $pkgs | sort | uniq
