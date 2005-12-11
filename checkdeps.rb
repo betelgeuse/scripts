@@ -61,7 +61,23 @@ def get_pkg_of_lib(lib)
 	`qfile -qC #{lib}`.chomp
 end
 
-def eval_line(pkg_hash,lib_hash,obj,line)
+def handle_lib(pkgs,libs,obj,lib)
+	if ! libs.index(lib)
+		if File.exists?(lib)
+			libs << lib
+			pkg = get_pkg_of_lib(lib)
+			puts pkg if $debug
+			pkgs << pkg
+			return true
+		else
+			$stderr.print "Parsed #{lib} from the output of ldd"
+			$stderr.puts  "but no such file exists"
+			return false
+		end
+	end
+end
+
+def eval_line(pkgs,libs,obj,line)
 	puts line if $debug
 	start = line.index('>')
 	puts "start",start if $debug
@@ -76,24 +92,15 @@ def eval_line(pkg_hash,lib_hash,obj,line)
 
 			puts lib if $debug
 
-			return false if( lib == '' )
-
-			if File.exists?(lib)
-				pkg = get_pkg_of_lib(lib)
-				puts pkg if $debug
-				pkg_hash[pkg]=obj
-				return true
-			else
-				$stderr.print "Parsed #{lib} from the output of ldd"
-				$stderr.puts  "but no such file exists"
-				return false
+			if( lib != '' )
+				handle_lib(pkgs, libs,obj,lib)
 			end
 		end
 	end
 end
 
-libs = Hash.new
-pkgs = Hash.new
+lib_table =[]
+pkg_table =[]
 
 qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
 
@@ -101,7 +108,7 @@ while obj = qlist.gets
 	obj.rstrip!
 	if isElf(obj)
 		ldd = IO.popen("ldd #{obj}")
-		ldd.each do | line | eval_line(pkgs,libs,obj,line) end
+		ldd.each do | line | eval_line(pkg_table,lib_table,obj,line) end
 	end
 end
 
@@ -110,4 +117,4 @@ if $debug
 	pp pkgs
 end
 
-puts pkgs.keys
+puts pkg_table.sort.uniq
