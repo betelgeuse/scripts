@@ -4,7 +4,6 @@
 # Author: Petteri Räty <betelgeuse@gentoo.org>
 
 $verbose = false
-$debug = false
 
 pkgs_to_check=[]
 
@@ -13,7 +12,6 @@ def print_help(exit_value)
 	puts
 	puts 'Options:'
 	puts '-v, --verbose'
-	puts '-d, --debug'
 	puts '-h, --help'
 	puts
 	puts 'Everything else is passed to qfile as it is'
@@ -23,8 +21,6 @@ end
 ARGV.each do | arg | 
 	if arg =~ /-v|--verbose/
 		$verbose = true
-	elsif arg =~ /-d|--debug/
-		$debug = true
 	elsif arg =~ /-h|--help/
 		print_help(0)
 	else
@@ -38,9 +34,7 @@ MAGIC="\x7FELF"
 
 def isElf(file)
 	if ! File.executable?(file) || ! File.file?(file)
-		if $verbose
-			puts "#{file} is not executable or a normal file"
-		end
+		puts "#{file} is not executable or a normal file" if $verbose
 		return false
 	end
 
@@ -56,7 +50,7 @@ def handle_lib(pkgs,libs,obj,lib)
 		if File.exists?(lib)
 			libs << lib
 			pkg = get_pkg_of_lib(lib)
-			puts pkg if $debug
+			puts pkg if $DEBUG
 			pkgs << pkg
 			return true
 		else
@@ -68,19 +62,19 @@ def handle_lib(pkgs,libs,obj,lib)
 end
 
 def eval_line(pkgs,libs,obj,line)
-	puts line if $debug
+	puts line if $DEBUG
 	start = line.index('>')
-	puts "start",start if $debug
+	puts "start",start if $DEBUG
 	if start
 		start+=1
 		stop  = line.index('(',start)
-		puts "stop",stop if $debug
+		puts "stop",stop if $DEBUG
 		if stop
 			stop-=1
 			lib = line[start..stop]
 			lib.strip!
 
-			puts lib if $debug
+			puts lib if $DEBUG
 
 			if( lib != '' )
 				handle_lib(pkgs, libs,obj,lib)
