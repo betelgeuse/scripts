@@ -1,5 +1,8 @@
 #!/usr/bin/ruby -w
 
+# Licensed under GPL-2 or later
+# Author: Petteri Räty <betelgeuse@gentoo.org>
+
 $verbose = false
 $debug = false
 
@@ -17,8 +20,6 @@ def print_help(exit_value)
 	exit(exit_value)
 end
 
-ARGV.length == 0 && print_help(1)
-
 ARGV.each do | arg | 
 	if arg =~ /-v|--verbose/
 		$verbose = true
@@ -31,7 +32,9 @@ ARGV.each do | arg |
 	end
 end
 
-MAGIC=[127,69,76,70]
+pkgs_to_check.length == 0 && print_help(1)
+
+MAGIC="\x7FELF"
 
 def isElf(file)
 	if ! File.executable?(file) || ! File.file?(file)
@@ -41,20 +44,7 @@ def isElf(file)
 		return false
 	end
 
-	f = File.new(file)
-	i = 0
-	match=true
-	
-	while ( c = f.getc ) && i < 4
-		if c != MAGIC[i]
-			match=false
-		end
-		i=i+1
-	end
-
-	f.close
-
-	return match
+	return File.read(file, 4) == MAGIC
 end
 
 def get_pkg_of_lib(lib)
@@ -110,11 +100,6 @@ while obj = qlist.gets
 		ldd = IO.popen("ldd #{obj}")
 		ldd.each do | line | eval_line(pkg_table,lib_table,obj,line) end
 	end
-end
-
-if $debug
-	require 'pp'
-	pp pkgs
 end
 
 puts pkg_table.sort.uniq
