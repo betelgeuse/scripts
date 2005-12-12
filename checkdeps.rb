@@ -55,7 +55,7 @@ def handle_lib(pkgs,libs,obj,lib)
 			return true
 		else
 			$stderr.print "Parsed #{lib} from the output of ldd"
-			$stderr.puts  "but no such file exists"
+			$stderr.puts  'but no such file exists'
 			return false
 		end
 	end
@@ -94,6 +94,13 @@ while obj = qlist.gets
 		ldd = IO.popen("ldd #{obj}")
 		ldd.each do | line | eval_line(pkg_table,lib_table,obj,line) end
 	end
+end
+
+qlist.close
+
+if $? != 0
+	$stderr.puts("qlist did not run succesfully.")
+	$stderr.puts("Please emerge portage-utils if you don't already have it.")
 end
 
 puts pkg_table.sort.uniq
