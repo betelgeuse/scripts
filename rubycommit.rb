@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
-require "/home/betelgeuse/bin/changelog.rb"
+$: << File.dirname(__FILE__)
+require "changelog.rb"
 
 system("eshowkw")
 system("cvs diff")
