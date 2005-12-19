@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# author: Petteri Räty <betelgeuse@gentoo.org>
+# Licensed under GPL-2 or later
+# see checkdeps.rb for a much better version done in ruby
+
 pkgs=""
 files=""
 libs=""
@@ -30,4 +35,3 @@ done
 #echo "stop"
 
 echo -e $pkgs | head --lines=-1 | sort | uniq
-#echo -e $pkgs | sort | uniq
