@@ -1,0 +1,55 @@
+#!/bin/bash
+
+JDK_HOME="$(java-config --jdk-home)"
+
+if [[ $# -lt 3 ]]; then
+	echo "Usage:"
+	echo "apicheck <pkg> <old version> <depends> <pkg_root>+"
+	edho "depends: in the format given to java-config"
+	echo "pkg_root: the root name of packages to check like +com or +org"
+	echo ""
+	echo "Example apicheck edtfptj 1.4.8 +com will check the latest edtftpj"
+	echo "against 1.4.8."
+	exit 1
+fi
+
+pkg="${1}"
+oldversion="${2}"
+depends="${3}"
+shift 3
+tocheck="${*}"
+
+if ! echo ${tocheck} | egrep -e '(\+|-)' >/dev/null; then
+	echo "The last argument (packages to check) needs"
+	echo "to have + or - in front of the package names."
+	exit 1
+fi
+
+TMP_DIR="$(mktemp -d /tmp/$(basename ${0})-XXXXXX || exit 1)"
+old="${TMP_DIR}/old.japi.gz"
+new="${TMP_DIR}/new.japi.gz"
+touch $old
+
+end() {
+	rm -v ${TMP_DIR}/*.japi.gz
+	rmdir ${TMP_DIR}
+	echo ${TMP_DIR}	
+	exit ${1}
+}
+
+generate_japi() {
+	atom="${1}"
+	[[ ! -z "${depends}" ]] && atom="${atom},${depends}"
+	jars=$(java-config -p ${atom} | sed -e "s/:/ /g")
+#	echo japize as ${2} packages "${JDK_HOME}/jre/lib/rt.jar" ${jars} ${tocheck} || end 1
+	japize as ${2} packages "${JDK_HOME}/jre/lib/rt.jar" ${jars} ${tocheck} || end 1
+}
+
+emerge -1 =${pkg}-${oldversion} || end 1
+generate_japi ${pkg} ${old}
+emerge -1 ${pkg} || end 1
+generate_japi ${pkg} ${new}
+
+japicompat ${old} ${new}
+
+end 0
