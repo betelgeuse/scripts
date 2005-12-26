@@ -19,9 +19,9 @@ def print_help(exit_value)
 end
 
 ARGV.each do | arg | 
-	if arg =~ /-v|--verbose/
+	if arg =~ /^(-v|--verbose)$/
 		$verbose = true
-	elsif arg =~ /-h|--help/
+	elsif arg =~ /^(-h|--help)$/
 		print_help(0)
 	else
 		pkgs_to_check << arg
@@ -64,11 +64,11 @@ end
 def eval_line(pkgs,libs,obj,line)
 	puts line if $DEBUG
 	start = line.index('>')
-	puts "start",start if $DEBUG
+	puts "start ",start if $DEBUG
 	if start
 		start+=1
 		stop  = line.index('(',start)
-		puts "stop",stop if $DEBUG
+		puts "stop ",stop if $DEBUG
 		if stop
 			stop-=1
 			lib = line[start..stop]
@@ -104,3 +104,7 @@ if $? != 0
 end
 
 puts pkg_table.sort.uniq
+
+if $verbose
+	puts lib_table
+end
