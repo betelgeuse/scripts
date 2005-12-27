@@ -13,6 +13,7 @@ def print_help(exit_value)
 	puts 'Options:'
 	puts '-v, --verbose'
 	puts '-h, --help'
+	puts '-d, --debug'
 	puts
 	puts 'Everything else is passed to qfile as it is'
 	exit(exit_value)
@@ -23,6 +24,8 @@ ARGV.each do | arg |
 		$verbose = true
 	elsif arg =~ /^(-h|--help)$/
 		print_help(0)
+	elsif arg =~ /^(-d|--debug)$/
+		$DEBUG = true
 	else
 		pkgs_to_check << arg
 	end
@@ -42,45 +45,42 @@ def isElf(file)
 end
 
 def get_pkg_of_lib(lib)
-	`qfile -qC #{lib}`.chomp
+	command="qfile -qC #{lib}"
+	output = `#{command}`.chomp
+	puts "qfile -qC :" + output if $DEBUG
+	output = output.split("\n").uniq.join(' || ')
+	puts "Formatted: " + output if $DEBUG
+	if $? != 0
+		$stderr.puts "#{command} returned a non zero value."
+	end
+	output
 end
 
 def handle_lib(pkgs,libs,obj,lib)
 	if ! libs.index(lib)
-		if File.exists?(lib)
-			libs << lib
-			pkg = get_pkg_of_lib(lib)
-			puts pkg if $DEBUG
-			pkgs << pkg
-			return true
-		else
-			$stderr.print "Parsed #{lib} from the output of ldd"
-			$stderr.puts  'but no such file exists'
-			return false
-		end
+		puts "library: " + lib if $DEBUG
+		libs << lib
+		pkg = get_pkg_of_lib(lib)
+		pkgs << pkg if ! pkgs.index(pkg)
 	end
 end
 
-def eval_line(pkgs,libs,obj,line)
-	puts line if $DEBUG
-	start = line.index('>')
-	puts "start ",start if $DEBUG
-	if start
-		start+=1
-		stop  = line.index('(',start)
-		puts "stop ",stop if $DEBUG
-		if stop
-			stop-=1
-			lib = line[start..stop]
-			lib.strip!
-
-			puts lib if $DEBUG
-
-			if( lib != '' )
-				handle_lib(pkgs, libs,obj,lib)
-			end
-		end
+def parse_output(pkg_table,lib_table,obj,line)
+	puts "scanelf: " + line if $DEBUG
+	libs = line.split(',')
+	for lib in libs
+		handle_lib(pkg_table,lib_table,obj,lib)
 	end
+	
+end
+
+def handle_extra_output(prog)
+	$stderr.puts 'This program expects only one line'
+	$stderr.puts "of output from scanelf. Extra lines:"
+	while line = scanelf.gets
+		$stderr.puts line
+	end
+	exit 2
 end
 
 lib_table =[]
@@ -91,8 +91,11 @@ qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
 while obj = qlist.gets
 	obj.rstrip!
 	if isElf(obj)
-		ldd = IO.popen("ldd #{obj}")
-		ldd.each do | line | eval_line(pkg_table,lib_table,obj,line) end
+		puts "obj: " + obj if $DEBUG
+		scanelf = IO.popen("scanelf -q -F '%n#F' #{obj}")
+		first_line = scanelf.gets
+		parse_output(pkg_table,lib_table,obj, first_line)
+		handle_extra_output(scanelf) if not scanelf.eof?
 	end
 end
 
@@ -103,7 +106,7 @@ if $? != 0
 	$stderr.puts("Please emerge portage-utils if you don't already have it.")
 end
 
-puts pkg_table.sort.uniq
+puts pkg_table.sort
 
 if $verbose
 	puts lib_table
