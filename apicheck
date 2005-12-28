@@ -32,8 +32,7 @@ touch $old
 
 end() {
 	rm -v ${TMP_DIR}/*.japi.gz
-	rmdir ${TMP_DIR}
-	echo ${TMP_DIR}	
+	rmdir -v ${TMP_DIR}
 	exit ${1}
 }
 
