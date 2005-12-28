@@ -26,6 +26,7 @@ ARGV.each do | arg |
 		print_help(0)
 	elsif arg =~ /^(-d|--debug)$/
 		$DEBUG = true
+		$verbose = true
 	else
 		pkgs_to_check << arg
 	end
@@ -47,31 +48,40 @@ end
 def get_pkg_of_lib(lib)
 	command="qfile -qC #{lib}"
 	output = `#{command}`.chomp
+
 	puts "qfile -qC :" + output if $DEBUG
+
 	output = output.split("\n").uniq.join(' || ')
+
 	puts "Formatted: " + output if $DEBUG
+
 	if $? != 0
 		$stderr.puts "#{command} returned a non zero value."
 	end
+
 	output
 end
 
-def handle_lib(pkgs,libs,obj,lib)
-	if ! libs.index(lib)
-		puts "library: " + lib if $DEBUG
-		libs << lib
-		pkg = get_pkg_of_lib(lib)
-		pkgs << pkg if ! pkgs.index(pkg)
+def handle_new_lib(obj,lib)
+	puts "library: " + lib if $DEBUG
+	$lib_table << lib
+	pkg = get_pkg_of_lib(lib)
+
+	if obj_table = $pkg_hash[pkg]
+		obj_table << obj
+	else
+		$pkg_hash[pkg]=[obj]
 	end
 end
 
-def parse_output(pkg_table,lib_table,obj,line)
+def parse_output(obj,line)
 	puts "scanelf: " + line if $DEBUG
 	libs = line.split(',')
 	for lib in libs
-		handle_lib(pkg_table,lib_table,obj,lib)
-	end
-	
+		if ! $lib_table.index(lib)
+			handle_new_lib(obj,lib)
+		end
+	end	
 end
 
 def handle_extra_output(prog)
@@ -83,8 +93,8 @@ def handle_extra_output(prog)
 	exit 2
 end
 
-lib_table =[]
-pkg_table =[]
+$lib_table =[]
+$pkg_hash ={}
 
 qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
 
@@ -94,7 +104,7 @@ while obj = qlist.gets
 		puts "obj: " + obj if $DEBUG
 		scanelf = IO.popen("scanelf -q -F '%n#F' #{obj}")
 		first_line = scanelf.gets
-		parse_output(pkg_table,lib_table,obj, first_line)
+		parse_output(obj, first_line)
 		handle_extra_output(scanelf) if not scanelf.eof?
 	end
 end
@@ -106,8 +116,11 @@ if $? != 0
 	$stderr.puts("Please emerge portage-utils if you don't already have it.")
 end
 
-puts pkg_table.sort
+$pkg_hash.sort.each do | pair |
+	puts pair[0]
+	puts "\t" + pair[1].uniq.sort.join("\n\t")
+end
 
 if $verbose
-	puts lib_table
+	puts $lib_table
 end
