@@ -1,3 +1,6 @@
+# Licensed under GPL-2 or later
+# Author: Petteri Räty <betelgeuse@gentoo.org>
+
 MAGIC="\x7FELF"
 def is_elf(file)
 	if ! File.executable?(file) || ! File.file?(file)
