@@ -3,7 +3,11 @@
 # Licensed under GPL-2 or later
 # Author: Petteri Räty <betelgeuse@gentoo.org>
 
+$: << File.dirname(__FILE__)
+require "pkgutil.rb"
+
 $verbose = false
+$quiet   = false
 
 pkgs_to_check=[]
 
@@ -11,6 +15,7 @@ def print_help(exit_value)
 	puts 'Usage: checkdeps.rb opts|pkgs'
 	puts
 	puts 'Options:'
+	puts '-q, --quiet'
 	puts '-v, --verbose'
 	puts '-h, --help'
 	puts '-d, --debug'
@@ -24,6 +29,8 @@ ARGV.each do | arg |
 		$verbose = true
 	elsif arg =~ /^(-h|--help)$/
 		print_help(0)
+	elsif arg =~ /^(-q|--quiet)$/
+		$quiet = true
 	elsif arg =~ /^(-d|--debug)$/
 		$DEBUG = true
 		$verbose = true
@@ -34,63 +41,50 @@ end
 
 pkgs_to_check.length == 0 && print_help(1)
 
-MAGIC="\x7FELF"
+class ElfObj
+	attr_reader :path, :pkgs
 
-def isElf(file)
-	if ! File.executable?(file) || ! File.file?(file)
-		puts "#{file} is not executable or a normal file" if $verbose
-		return false
+	def initialize(path)
+		@path = path
+		@pkgs = []
+	end
+	
+	def <<(pkg)
+		if ! @pkgs.index(pkg)
+			@pkgs << pkg
+		else
+			nil
+		end
 	end
 
-	return File.read(file, 4) == MAGIC
-end
-
-def get_pkg_of_lib(lib)
-	command="qfile -qC #{lib}"
-	output = `#{command}`.chomp
-
-	puts "qfile -qC :" + output if $DEBUG
-
-	output = output.split("\n").uniq.join(' || ')
-
-	puts "Formatted: " + output if $DEBUG
-
-	if $? != 0
-		$stderr.puts "#{command} returned a non zero value."
+	def <=>(r)
+		return @path <=> r.path
 	end
 
-	output
+	def to_s()
+		puts 'ElfObj to_s:' if $DEBUG
+		s = "\t" + @path
+		s+="\t" + @path + "\n\t\t" + @pkgs.sort.join("\n\t\t") if $DEBUG
+		s
+	end
 end
+
 
 def handle_new_lib(obj,lib)
-	puts "library: " + lib if $DEBUG
+	puts 'library: ' + lib if $DEBUG
 	$lib_table << lib
 	pkg = get_pkg_of_lib(lib)
+	
+	if ! pkg
+		return
+	end
 
 	if obj_table = $pkg_hash[pkg]
 		obj_table << obj
 	else
 		$pkg_hash[pkg]=[obj]
+		obj << pkg
 	end
-end
-
-def parse_output(obj,line)
-	puts "scanelf: " + line if $DEBUG
-	libs = line.split(',')
-	for lib in libs
-		if ! $lib_table.index(lib)
-			handle_new_lib(obj,lib)
-		end
-	end	
-end
-
-def handle_extra_output(prog)
-	$stderr.puts 'This program expects only one line'
-	$stderr.puts "of output from scanelf. Extra lines:"
-	while line = scanelf.gets
-		$stderr.puts line
-	end
-	exit 2
 end
 
 $lib_table =[]
@@ -100,25 +94,32 @@ qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
 
 while obj = qlist.gets
 	obj.rstrip!
-	if isElf(obj)
-		puts "obj: " + obj if $DEBUG
-		scanelf = IO.popen("scanelf -q -F '%n#F' #{obj}")
-		first_line = scanelf.gets
-		parse_output(obj, first_line)
-		handle_extra_output(scanelf) if not scanelf.eof?
+	if is_elf(obj)
+		puts 'obj: ' + obj if $DEBUG
+		elf_obj = ElfObj.new(obj)
+		run_scanelf(obj) do | lib |
+			if ! $lib_table.index(lib)
+				handle_new_lib(elf_obj,lib)
+			end
+		end
 	end
 end
 
 qlist.close
 
 if $? != 0
-	$stderr.puts("qlist did not run succesfully.")
-	$stderr.puts("Please emerge portage-utils if you don't already have it.")
+	$stderr.puts('qlist did not run succesfully.')
+	$stderr.puts('Please emerge portage-utils if you don\'t already have it.')
 end
 
+require 'pp' if $DEBUG
+
 $pkg_hash.sort.each do | pair |
+	puts 'Key: ' if $DEBUG
 	puts pair[0]
-	puts "\t" + pair[1].uniq.sort.join("\n\t")
+	puts 'Value: ' if $DEBUG
+	puts pair[1].uniq.sort if ! $quiet
+	puts 'end Hash.' if $DEBUG
 end
 
 if $verbose
