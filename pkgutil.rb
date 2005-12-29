@@ -49,3 +49,28 @@ def run_scanelf(elf)
 		yield lib
 	end	
 end
+
+class ScanElf
+	private_class_method :new
+	@@instance = nil
+	
+	def ScanElf.instance
+		@@instance = new unless @@instance
+		@@instance
+	end
+
+	def initialize
+		@process = IO.popen('scanelf -q -F "%n#F" -f /dev/stdin','r+')
+	end
+
+	def each(elf, &block)
+		@process.puts(elf)
+		result = @process.gets
+	
+		libs = result.split(',')
+		for lib in libs
+			block.call(lib)
+		end
+	end
+end
+	
