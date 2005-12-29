@@ -92,12 +92,14 @@ $pkg_hash ={}
 
 qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
 
+scan_elf = ScanElf.instance
+
 while obj = qlist.gets
 	obj.rstrip!
 	if is_elf(obj)
 		puts 'obj: ' + obj if $DEBUG
 		elf_obj = ElfObj.new(obj)
-		run_scanelf(obj) do | lib |
+		scan_elf.each(obj) do | lib |
 			if ! $lib_table.index(lib)
 				handle_new_lib(elf_obj,lib)
 			end
