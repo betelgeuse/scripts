@@ -3,30 +3,14 @@
 
 MAGIC="\x7FELF"
 def is_elf(file)
-	if ! File.executable?(file) || ! File.file?(file)
-		puts "#{file} is not executable or a normal file" if $verbose
-		return false
-	end
-
-	return File.read(file, 4) == MAGIC
+	File.executable?(file) && File.file?(file) && File.read(file, 4) == MAGIC
 end
 
 def get_pkg_of_lib(lib)
-	command="qfile -qC #{lib}"
-	output = `#{command}`.chomp
-
-	if $? != 0
-		$stderr.puts "#{command} returned a non zero value."
-		return nil
-	end
-
-	puts command + ' :' + output if $DEBUG
-
-	output = output.split("\n").uniq.join(' || ')
-
-	puts 'Formatted: ' + output if $DEBUG
-
-	output
+	command='qfile -qC ' + lib
+	output = `#{command}`.split("\n")
+	output.uniq!
+	output.join(' || ')
 end
 
 def handle_extra_output(prog)
@@ -63,13 +47,13 @@ class ScanElf
 		@process = IO.popen('scanelf -q -F "%n#F" -f /dev/stdin','r+')
 	end
 
-	def each(elf, &block)
+	def each(elf)
 		@process.puts(elf)
 		result = @process.gets
 	
 		libs = result.split(',')
 		for lib in libs
-			block.call(lib)
+			yield lib
 		end
 	end
 end

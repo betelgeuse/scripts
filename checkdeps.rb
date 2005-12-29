@@ -72,7 +72,7 @@ end
 
 def handle_new_lib(obj,lib)
 	puts 'library: ' + lib if $DEBUG
-	$lib_table << lib
+	$lib_hash[lib]=nil
 	pkg = get_pkg_of_lib(lib)
 	
 	if ! pkg
@@ -87,7 +87,7 @@ def handle_new_lib(obj,lib)
 	end
 end
 
-$lib_table =[]
+$lib_hash ={}
 $pkg_hash ={}
 
 qlist = IO.popen("qlist #{pkgs_to_check.join(' ')}")
@@ -100,10 +100,10 @@ while obj = qlist.gets
 		puts 'obj: ' + obj if $DEBUG
 		elf_obj = ElfObj.new(obj)
 		scan_elf.each(obj) do | lib |
-			if ! $lib_table.index(lib)
-				handle_new_lib(elf_obj,lib)
-			end
+			handle_new_lib(elf_obj,lib) unless $lib_hash.key?(lib)
 		end
+	else
+		puts "#{file} is not executable or a normal file" if $verbose
 	end
 end
 
@@ -114,16 +114,14 @@ if $? != 0
 	$stderr.puts('Please emerge portage-utils if you don\'t already have it.')
 end
 
-require 'pp' if $DEBUG
-
 $pkg_hash.sort.each do | pair |
 	puts 'Key: ' if $DEBUG
 	puts pair[0]
 	puts 'Value: ' if $DEBUG
-	puts pair[1].uniq.sort if ! $quiet
+	puts pair[1].uniq.sort unless $quiet
 	puts 'end Hash.' if $DEBUG
 end
 
 if $verbose
-	puts $lib_table
+	puts $lib_hash.keys
 end
