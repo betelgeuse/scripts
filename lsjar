@@ -1,5 +1,12 @@
 #!/bin/bash
+if [[ $# != 1 ]]; then
+	echo "Arguments needed."
+	exit 1
+fi
+
+jar_binary="$(java-config --jar)"
+
 for jar in $(java-config -p ${1} | sed -e "s/:/\n/g"); do
 	echo ${jar}
-	jar -tf ${jar}
+	"${jar_binary}" -tf ${jar}
 done
