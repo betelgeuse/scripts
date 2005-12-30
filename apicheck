@@ -3,9 +3,10 @@
 JDK_HOME="$(java-config --jdk-home)"
 
 if [[ $# -lt 3 ]]; then
+	prog=$(basename "${0}")
 	echo "Usage:"
-	echo "apicheck <pkg> <old version> <depends> <pkg_root>+"
-	edho "depends: in the format given to java-config"
+	echo "${prog} <pkg> <old version> <depends> <pkg_root>+"
+	echo "depends: in the format given to java-config"
 	echo "pkg_root: the root name of packages to check like +com or +org"
 	echo ""
 	echo "Example apicheck edtfptj 1.4.8 +com will check the latest edtftpj"
@@ -44,9 +45,9 @@ generate_japi() {
 	japize as ${2} packages "${JDK_HOME}/jre/lib/rt.jar" ${jars} ${tocheck} || end 1
 }
 
-emerge -1 =${pkg}-${oldversion} || end 1
+CLEAN_DELAY=0 emerge -1 =${pkg}-${oldversion} || end 1
 generate_japi ${pkg} ${old}
-emerge -1 ${pkg} || end 1
+CLEAN_DELAY=0 emerge -1 ${pkg} || end 1
 generate_japi ${pkg} ${new}
 
 japicompat ${old} ${new}
