@@ -19,5 +19,5 @@ def getLastChangeLogEntry()
    	end
 
 	f.close
-	return entry
+	return entry.rstrip
 end
