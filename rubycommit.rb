@@ -15,9 +15,13 @@ $? != 0 && exit
 entry = ARGV[0]
 entry || entry = getLastChangeLogEntry
 
+subbed = entry.gsub("'") { "\\'" }
+
 puts entry
+puts "Repoman arg: '" + subbed + "'"
 puts 'Continue?'
 
 if $stdin.gets.match(/y|yes/i)
-	system("repoman commit --commitmsg '#{entry}'")
+	puts "repoman commit --commitmsg '#{subbed}'" if $DEBUG
+	system("repoman commit --commitmsg '#{subbed}'")
 end
