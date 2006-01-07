@@ -41,8 +41,11 @@ public class PackageLister
             for(Iterator i = packages.iterator(); i.hasNext();)
             {
                 String pkg = (String) i.next();
-                System.out.println(pkg.replaceAll("/","."));
+                System.out.print("+" + pkg.replaceAll("/",".") + " ");
             }
+
+            System.out.println();
+			
         }
         
         catch(IOException e)

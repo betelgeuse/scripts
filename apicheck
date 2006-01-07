@@ -55,12 +55,7 @@ portagetmp="$(portageq envvar PORTAGE_TMPDIR || end 1)/portage"
 ebuild "${oldebuild}" install || end 1
 oldjars="$(getjars ${oldebuild})"
 #echo $oldjars
-pkgs="$(listpackages ${oldjars} | xargs echo)" 
-tocheck=""
-
-for pkg in ${pkgs}; do
-	tocheck="${tocheck} +${pkg}"
-done
+tocheck="$(listpackages ${oldjars})" 
 
 #echo $tocheck
 generate_japi ${old} "${oldjars}" "${tocheck}"
