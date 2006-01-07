@@ -2,29 +2,30 @@
 
 JDK_HOME="$(java-config --jdk-home)"
 
-if [[ $# -lt 3 ]]; then
+usage() {
 	prog=$(basename "${0}")
 	echo "Usage:"
-	echo "${prog} <pkg> <old version> <depends> <pkg_root>+"
+	echo "${prog} <old ebuild> <new ebuild> <depends>"
 	echo "depends: in the format given to java-config"
 	echo "pkg_root: the root name of packages to check like +com or +org"
 	echo ""
-	echo "Example apicheck edtfptj 1.4.8 +com will check the latest edtftpj"
+	echo "Example apicheck edtfptj 1.4.8 will check the latest edtftpj"
 	echo "against 1.4.8."
 	exit 1
+}
+
+if [[ $# -lt 2 ]]; then
+	usage
 fi
 
-pkg="${1}"
-oldversion="${2}"
+oldebuild="${1}"
+newebuild="${2}"
+
 depends="${3}"
-shift 3
-tocheck="${*}"
 
-if ! echo ${tocheck} | egrep -e '(\+|-)' >/dev/null; then
-	echo "The last argument (packages to check) needs"
-	echo "to have + or - in front of the package names."
-	exit 1
-fi
+if ! [[ -e "${oldebuild}" && -e "${newebuild}" ]]; then
+	usage
+fi	
 
 TMP_DIR="$(mktemp -d /tmp/$(basename ${0})-XXXXXX || exit 1)"
 old="${TMP_DIR}/old.japi.gz"
@@ -37,18 +38,36 @@ end() {
 	exit ${1}
 }
 
-generate_japi() {
-	atom="${1}"
-	[[ ! -z "${depends}" ]] && atom="${atom},${depends}"
-	jars=$(java-config -p ${atom} | sed -e "s/:/ /g")
-#	echo japize as ${2} packages "${JDK_HOME}/jre/lib/rt.jar" ${jars} ${tocheck} || end 1
-	japize as ${2} packages "${JDK_HOME}/jre/lib/rt.jar" ${jars} ${tocheck} || end 1
+getjars() {
+	find "${portagetmp}/$(sed -e "s/\.ebuild$//" <<< ${1})/image" -name '*.jar' || end 1
 }
 
-CLEAN_DELAY=0 emerge -1 =${pkg}-${oldversion} || end 1
-generate_japi ${pkg} ${old}
-CLEAN_DELAY=0 emerge -1 ${pkg} || end 1
-generate_japi ${pkg} ${new}
+generate_japi() {
+	japize as ${1} packages "${JDK_HOME}/jre/lib/rt.jar" ${2} ${dependjars} ${3} || end 1
+}
+
+listpackages() {
+	$(java-config --java) -cp "$(dirname "${0}")" PackageLister "${@}" || end 1
+}
+
+portagetmp="$(portageq envvar PORTAGE_TMPDIR || end 1)/portage"
+
+ebuild "${oldebuild}" install || end 1
+oldjars="$(getjars ${oldebuild})"
+#echo $oldjars
+pkgs="$(listpackages ${oldjars} | xargs echo)" 
+tocheck=""
+
+for pkg in ${pkgs}; do
+	tocheck="${tocheck} +${pkg}"
+done
+
+#echo $tocheck
+generate_japi ${old} "${oldjars}" "${tocheck}"
+
+ebuild "${newebuild}" install || end 1
+newjars="$(getjars ${newebuild})"
+generate_japi ${new} "${newjars}" "${tocheck}"
 
 japicompat ${old} ${new}
 
