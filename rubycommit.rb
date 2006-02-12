@@ -22,6 +22,6 @@ puts "Repoman arg: '" + subbed + "'"
 puts 'Continue?'
 
 if $stdin.gets.match(/y|yes/i)
-	puts "repoman commit --commitmsg '#{subbed}'" if $DEBUG
-	system("repoman commit --commitmsg '#{subbed}'")
+	puts "repoman commit --commitmsg \"#{subbed}\"" if $DEBUG
+	system("repoman commit --commitmsg \"#{subbed}\"")
 end
