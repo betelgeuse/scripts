@@ -7,7 +7,6 @@ require "fileutils"
 entry = getLastChangeLogEntry()
 puts entry
 FileUtils.mv 'ChangeLog', '/tmp/ChangeLog.bak' || exit
-FileUtils.rm 'ChangeLog' || exit
 
 system("cvs up")
 
