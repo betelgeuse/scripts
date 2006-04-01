@@ -10,6 +10,7 @@ def get_pkg_of_lib(lib)
 	command='qfile -qC ' + lib
 	output = `#{command}`.split("\n")
 	output.uniq!
+	raise "#{command} exited with #{$?}" if $? != 0 
 	output.join(' || ')
 end
 
@@ -57,4 +58,4 @@ class ScanElf
 		end
 	end
 end
-	
+
