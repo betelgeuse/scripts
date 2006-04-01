@@ -103,7 +103,7 @@ while obj = qlist.gets
 			handle_new_lib(elf_obj,lib) unless $lib_hash.key?(lib)
 		end
 	else
-		puts "#{obj} is not executable or a normal file" if $verbose
+		puts "#{obj} is not an elf binary" if $verbose
 	end
 end
 
