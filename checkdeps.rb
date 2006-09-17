@@ -20,7 +20,7 @@ def print_help(exit_value)
 	puts '-h, --help'
 	puts '-d, --debug'
 	puts
-	puts 'Everything else is passed to qfile as it is'
+	puts 'Everything else is passed to qlist as it is'
 	exit(exit_value)
 end
 
@@ -70,10 +70,13 @@ class ElfObj
 end
 
 
-def handle_new_lib(obj,lib)
+def handle_lib(obj,lib)
 	puts 'library: ' + lib if $DEBUG
-	$lib_hash[lib]=nil
-	pkg = get_pkg_of_lib(lib)
+	
+	if ! pkg = $lib_hash[lib]
+		pkg = get_pkg_of_lib(lib)
+		$lib_hash[lib] = pkg
+	end
 	
 	if ! pkg
 		return
@@ -100,7 +103,7 @@ while obj = qlist.gets
 		puts 'obj: ' + obj if $DEBUG
 		elf_obj = ElfObj.new(obj)
 		scan_elf.each(obj) do | lib |
-			handle_new_lib(elf_obj,lib) unless $lib_hash.key?(lib)
+			handle_lib(elf_obj,lib)
 		end
 	else
 		puts "#{obj} is not an elf binary" if $verbose
