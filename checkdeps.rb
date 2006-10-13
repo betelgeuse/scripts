@@ -74,7 +74,11 @@ def handle_lib(obj,lib)
 	puts 'library: ' + lib if $DEBUG
 	
 	if ! pkg = $lib_hash[lib]
-		pkg = get_pkg_of_lib(lib)
+		begin
+			pkg = get_pkg_of_lib(lib)
+		rescue
+			pkg = "Not found"
+		end
 		$lib_hash[lib] = pkg
 	end
 	
