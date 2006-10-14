@@ -3,7 +3,7 @@
 $: << File.dirname(__FILE__)
 require "changelog.rb"
 
-system("eshowkw")
+system("adjutrix -k --log-level silent")
 system("cvs diff")
 puts "Exit status: " + $?.to_s
 $? == 2 && exit
