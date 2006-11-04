@@ -12,6 +12,9 @@ system("repoman full")
 puts "Exit status: " + $?.to_s
 $? != 0 && exit
 
+system("qualudis")
+puts "Exit status: " + $?.to_s
+
 entry = ARGV[0]
 entry || entry = getLastChangeLogEntry
 
