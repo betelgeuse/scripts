@@ -29,5 +29,5 @@ def getLastChangeLogEntry()
    	end
 
 	f.close
-	return entry.rstrip
+	return entry.rstrip.gsub('"','\"')
 end
