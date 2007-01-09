@@ -1,0 +1,5 @@
+#!/bin/bash
+git init-db
+echo ".svn" >> .git/info/exclude
+git add .
+git-commit
