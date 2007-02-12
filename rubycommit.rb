@@ -12,7 +12,10 @@ system('FEATURES="-strict" repoman full')
 puts "Exit status: " + $?.to_s
 $? != 0 && exit
 
-system("qualudis")
+system("qualudis --log-level silent")
+puts "Exit status: " + $?.to_s
+
+system("pcheck -r portdir")
 puts "Exit status: " + $?.to_s
 
 entry = ARGV[0]
