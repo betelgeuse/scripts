@@ -52,13 +52,19 @@ def check_changelog(file):
 						if not file_printed:
 							print file + ":"
 							file_printed = True
-						print "\tMissing new ebuild entry *${P} (date) for entry on line " + str(n+1)
+						print "\tMissing new ebuild entry *" + to_find +" (date) for addition on line " + str(n+1)
 				n+=1
 				if line.find(":") >= 0 or n == length:
 					break
 				line = lines[n]
 		n+=1	
 	f.close()
+	return not file_printed
 
+bad_found = False
 for ch in sys.argv[1:]:
-	check_changelog(ch)
+	if not check_changelog(ch):
+		bad_found = True
+
+if bad_found:
+	exit(1)
