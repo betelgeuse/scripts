@@ -3,6 +3,10 @@
 $: << File.dirname(__FILE__)
 require "changelog.rb"
 
+system("check-changelog ChangeLog")
+puts "Exit status: " + $?.to_s
+$? != 0 && exit
+
 system("adjutrix -k --log-level silent")
 system("cvs diff")
 puts "Exit status: " + $?.to_s
