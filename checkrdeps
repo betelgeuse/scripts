@@ -1,0 +1,9 @@
+#!/bin/bash
+portdir=$(portageq envvar PORTDIR)
+cd "${portdir}"
+for pkg in $(pquery --restrict-revdep=${1} | sed -re 's/-[^-]+(-r.)?$//' | uniq); do
+	cd "${portdir}/${pkg}"
+	echo "${pkg}"
+	pcheck -r portdir -c pkgcore_checks.visibility
+done
+#rdeps ${1} | egrep R?DEPEND | cut -f 3 | xargs emerge -1 --nodeps -a
