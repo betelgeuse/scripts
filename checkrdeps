@@ -1,4 +1,8 @@
 #!/bin/bash
+# Used to check reverse rependencies after deleting ebuilds
+# 1. delete ebuilds
+# 2. run this script with ${CATEGORY}/${PN}
+
 portdir=$(portageq envvar PORTDIR)
 cd "${portdir}"
 for pkg in $(pquery --restrict-revdep=${1} | sed -re 's/-[^-]+(-r.)?$//' | uniq); do
@@ -6,4 +10,3 @@ for pkg in $(pquery --restrict-revdep=${1} | sed -re 's/-[^-]+(-r.)?$//' | uniq)
 	echo "${pkg}"
 	pcheck -r portdir -c pkgcore_checks.visibility
 done
-#rdeps ${1} | egrep R?DEPEND | cut -f 3 | xargs emerge -1 --nodeps -a
