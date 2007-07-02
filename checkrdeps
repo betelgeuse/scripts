@@ -12,7 +12,7 @@ portdir=$(portageq envvar PORTDIR)
 cd "${portdir}"
 
 for pkg in $(pquery --raw --restrict-revdep=${pkg} | sed -re 's/-[^-]+(-r[0-9]+)?$//' | uniq); do
-	cd "${portdir}/${pkg}"
+	cd "${portdir}/${pkg}" || continue
 	echo "${pkg}"
 	pcheck -r portdir -c pkgcore_checks.visibility
 done
