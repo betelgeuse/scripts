@@ -10,7 +10,7 @@ date_format="\d{1,2} \w{3} \d{4}"
 date_regex = re.compile(date_format)
 
 # Used in entries with the actual change text
-date_regex_semicolon = re.compile(date_format + ";")
+date_regex_semicolon = re.compile("(%s);" % date_format)
 
 # + is used in package names (for example gtk+) so try to handle that
 ebuild_regex = re.compile("((,|\s)\+[\S\+]+\.ebuild)")
@@ -45,7 +45,9 @@ def check_changelog(file):
 	while n < length:
 		line = lines[n]
 		# Use dates to find separate ChangeLog entries
+		match = date_regex_semicolon.search(line)
 		if date_regex_semicolon.search(line):
+			date = match.group(1)
 			while True:
 				for m in ebuild_regex.findall(line):
 					# remove + and trailing .ebuild
@@ -54,7 +56,7 @@ def check_changelog(file):
 						if not file_printed:
 							print file + ":"
 							file_printed = True
-						print "\tMissing new ebuild entry *" + to_find +" (date) for addition on line " + str(n+1)
+						print "\tMissing new ebuild entry *" + to_find +" (%s) for addition on line " % date + str(n+1)
 				n+=1
 				if line.find(":") >= 0 or n == length:
 					break
