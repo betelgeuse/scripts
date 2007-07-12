@@ -46,7 +46,7 @@ def check_changelog(file):
 		line = lines[n]
 		# Use dates to find separate ChangeLog entries
 		match = date_regex_semicolon.search(line)
-		if date_regex_semicolon.search(line):
+		if match:
 			date = match.group(1)
 			while True:
 				for m in ebuild_regex.findall(line):
