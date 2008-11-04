@@ -1,0 +1,93 @@
+#!/usr/bin/ruby
+
+## Setup paludis 
+
+file = ARGV[1]
+unless file
+  $stderr.puts 'Target file needed'
+  exit 1
+end
+
+require 'Paludis'
+
+Paludis::Log.instance.log_level = Paludis::LogLevel::Warning
+env = Paludis::NoConfigEnvironment.new('/usr/portage', '/var/cache/paludis/metadata/')
+repo_name = 'gentoo'
+repo = env.package_database.fetch_repository(repo_name)
+repo_location = repo['location'].value
+
+# for example *ant-core-1.7.1-r1 (16 Jul 2008)
+new_re = /^\*([^\(]+) \((\d\d \w\w\w \d\d\d\d)\)\s*$/
+
+## Setup dates 
+
+require 'date'
+require 'activesupport'
+
+# Keep old entries around for a week
+month_ago = Date.today << 1
+last_date =  month_ago - 7
+
+## Setup rss maker 
+
+require 'rss/maker'
+
+content = RSS::Maker.make('2.0') { |m|
+  m.channel.title = "Unstable Ebuilds in Tree for a Month"
+  m.channel.link = "http://gentoo.petteriraty.eu"
+  m.channel.description = "Shows ebuilds that have been in the tree for a month and have no stable keywords yet."
+  #The writer should be fixed to not put this last in the page
+  #m.channel.ttl = 60*24
+  mail = 'gentoo-rss@petteriraty.eu (Petteri Räty)'
+  m.channel.webMaster = mail
+  m.channel.managingEditor = mail
+  m.channel.pubDate = Time.now
+
+  gen = Paludis::Generator::InRepository.new(repo_name)
+  env[Paludis::Selection::BestVersionOnly.new(gen)].each { |id|
+    path = File.join(repo_location, id.name, 'ChangeLog')
+    category = id.name.category
+    catch :done do
+      File.open(path).each { |line|
+        if line =~ new_re
+          begin
+            d = Date.parse($~[2])
+            # presume chronological order 
+            throw :done if d < last_date
+
+            if d >= last_date and d <= month_ago
+              ebuild_file = File.join(repo_location, category, id.name.package, $~[1] + '.ebuild')
+              if FileTest.exists?(ebuild_file)
+                cat_pv = "#{category}/#{$~[1]}"
+                atom = "=#{cat_pv}"
+                dep_spec = Paludis::parse_user_package_dep_spec(atom, env,[])
+                pkg_id = env[Paludis::Selection::RequireExactlyOne.new(gen & Paludis::Generator::Matches.new(dep_spec))][0]
+                kws = pkg_id.keywords_key
+                # Unknown EAPI if null
+                if kws
+                  stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
+                  if stable.length == 0
+                    i = m.items.new_item
+                    i.title = cat_pv
+                    # add month for the date
+                    i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
+                    i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
+                    i.guid.isPermaLink = "false"
+                    puts "#{atom} #{d} #{pkg_id}"
+                  end
+                end
+              end
+            end
+          rescue ArgumentError
+          end
+        end
+      }
+    end
+  }
+}
+
+File.open(file, 'w') { |f|
+  f.write(content)
+}
+
+# vim: et sw=2 ts=2:
