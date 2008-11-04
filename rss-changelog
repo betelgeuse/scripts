@@ -2,7 +2,7 @@
 
 ## Setup paludis 
 
-file = ARGV[1]
+file = ARGV[0]
 unless file
   $stderr.puts 'Target file needed'
   exit 1
