@@ -22,6 +22,7 @@ new_re = /^\*([^\(]+) \((\d\d \w\w\w \d\d\d\d)\)\s*$/
 ## Setup dates 
 
 require 'date'
+require 'rubygems'
 require 'activesupport'
 
 # Keep old entries around for a week
