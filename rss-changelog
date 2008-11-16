@@ -73,6 +73,14 @@ content = RSS::Maker.make('2.0') { |m|
                     i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
                     i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
                     i.guid.isPermaLink = "false"
+                    i.description = <<-EOF
+                      Added to tree:<br/>
+                      #{d}<br />
+                      Open bugs:<br />
+                      <a href="https://bugs.gentoo.org/buglist.cgi?quicksearch=#{id.name.package}">
+                      Quick Seach #{id.name.package} on bugs.gentoo.org
+                      </a>
+                    EOF
                     puts "#{atom} #{d} #{pkg_id}"
                   end
                 end
