@@ -63,6 +63,25 @@ class Handler
   end
 end
 
+## Setup bug amount parser
+
+require 'hpricot'
+require 'open-uri'
+require 'cgi'
+
+$bug_titles = []
+
+['UNCONFIRMED','NEW','ASSIGNED','REOPENED'].each { |status|
+  doc = open("http://bugs.gentoo.org/data/cached/buglist-#{status}.html") { |f| Hpricot(f) }
+  doc.search('//li/a/em').each { |b|
+	  $bug_titles << CGI.unescapeHTML(b.inner_html)
+  }
+}
+
+def bug_count(atom)
+  $bug_titles.select { |b| b.include?(atom) }.length
+end
+
 ## Setup rss maker
 
 require 'rss/maker'
@@ -90,7 +109,8 @@ content = RSS::Maker.make('2.0') { |m|
           throw :done if d < last_date
 
           if d >= last_date and d <= month_ago
-            ebuild_file = File.join(repo_location, category, id.name.package, $~[1] + '.ebuild')
+            pn = id.name.package
+            ebuild_file = File.join(repo_location, category, pn, $~[1] + '.ebuild')
             if FileTest.exists?(ebuild_file)
               cat_pv = "#{category}/#{$~[1]}"
               atom = "=#{cat_pv}"
@@ -107,12 +127,15 @@ content = RSS::Maker.make('2.0') { |m|
                   handler = Handler.new
                   REXML::Document.parse_stream(File.new(metadata),handler);
 
+                  cat_pn = category + '/' + pn
                   i = m.items.new_item
                   i.title = cat_pv
                   # add month for the date
                   i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
                   i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
                   i.guid.isPermaLink = "false"
+                  cat_bugs = bug_count(cat_pn)
+                  pn_bugs = bug_count(pn)
                   i.description = <<-EOF
                     Added to tree:<br/>
                     #{d}<br />
@@ -120,10 +143,10 @@ content = RSS::Maker.make('2.0') { |m|
                     #{handler.herds.join(' ')}<br />
                     Maintainers:<br />
                     #{handler.maintainers.join(' ')}<br />
-                    Open bugs:<br />
-                    <a href="https://bugs.gentoo.org/buglist.cgi?quicksearch=#{id.name.package}">
-                    Quick Seach #{id.name.package} on bugs.gentoo.org
-                    </a>
+                    Open bugs for #{cat_pn}:<br />
+                    #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
+                    Open bugs for #{pn}:<br />
+                    #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
                   EOF
                   puts "#{atom} #{d} #{pkg_id}"
                 end
