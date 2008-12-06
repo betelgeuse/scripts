@@ -29,40 +29,6 @@ require 'activesupport'
 month_ago = Date.today << 1
 last_date =  month_ago - 7
 
-## Setup metadata.xml parser
-
-require 'rexml/document'
-require 'rexml/streamlistener'
-
-class Handler
-  include REXML::StreamListener
-
-  attr_reader :herds, :maintainers
-
-  def initialize()
-    @herds = []
-    @maintainers = []
-  end
-
-  def tag_start(name,attrs)
-    case name
-    when 'herd':
-      @herd_text = true
-    when 'email'
-      @email_text = true
-    end
-  end
-
-  def text(text)
-    @herds << text if @herd_text
-    @maintainers << text if @email_text
-  end
-
-  def tag_end(name)
-    @herd_text = @email_text = false
-  end
-end
-
 ## Setup bug amount parser
 
 require 'hpricot'
@@ -122,11 +88,6 @@ content = RSS::Maker.make('2.0') { |m|
               if kws
                 stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
                 if stable.length == 0
-                  # Parse metadata for maintainers
-                  metadata = File.join(repo_location,id.name, 'metadata.xml')
-                  handler = Handler.new
-                  REXML::Document.parse_stream(File.new(metadata),handler);
-
                   cat_pn = category + '/' + pn
                   i = m.items.new_item
                   i.title = cat_pv
@@ -136,13 +97,16 @@ content = RSS::Maker.make('2.0') { |m|
                   i.guid.isPermaLink = "false"
                   cat_bugs = bug_count(cat_pn)
                   pn_bugs = bug_count(pn)
+                  herds = pkg_id['herds']
+                  maintainers = pkg_id['maintainers']
+
                   i.description = <<-EOF
                     Added to tree:<br/>
                     #{d}<br />
                     Herds:<br />
-                    #{handler.herds.join(' ')}<br />
+                    #{herds.value.join(' ') if herds}<br />
                     Maintainers:<br />
-                    #{handler.maintainers.join(' ')}<br />
+                    #{maintainers.value.join(' ') if maintainers}<br />
                     Open bugs for #{cat_pn}:<br />
                     #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
                     Open bugs for #{pn}:<br />
