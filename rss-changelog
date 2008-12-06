@@ -95,7 +95,7 @@ content = RSS::Maker.make('2.0') { |m|
     path = File.join(repo_location, id.name, 'ChangeLog')
     category = id.name.category
     catch :done do
-      File.open(path).each { |line|
+      File.foreach(path) { |line|
         if line =~ new_re
           d = Date.parse($~[2])
           # presume chronological order
