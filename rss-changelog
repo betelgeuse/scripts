@@ -11,23 +11,11 @@ end
 require 'Paludis'
 
 Paludis::Log.instance.log_level = Paludis::LogLevel::Warning
-env = Paludis::NoConfigEnvironment.new('/usr/portage', '/var/cache/paludis/metadata/')
-repo_name = 'gentoo'
-repo = env.package_database.fetch_repository(repo_name)
-repo_location = repo['location'].value
-
-# for example *ant-core-1.7.1-r1 (16 Jul 2008)
-new_re = /^\*([^\(]+) \((\d\d \w\w\w \d\d\d\d)\)\s*$/
-
-## Setup dates
-
-require 'date'
-require 'rubygems'
-require 'activesupport'
-
-# Keep old entries around for a week
-month_ago = Date.today << 1
-last_date =  month_ago - 7
+PALUDIS_ENV = Paludis::NoConfigEnvironment.new('/usr/portage', '/var/cache/paludis/metadata/')
+REPO_NAME = 'gentoo'
+repo = PALUDIS_ENV.package_database.fetch_repository(REPO_NAME)
+REPO_LOCATION = repo['location'].value
+IN_REPOSITORY_GENTOO = Paludis::Generator::InRepository.new(REPO_NAME)
 
 ## Setup bug amount parser
 
@@ -79,6 +67,48 @@ def populate_item(i, pid,d)
   EOF
 end
 
+# for example *ant-core-1.7.1-r1 (16 Jul 2008)
+NEW_RE = /^\*([^\(]+) \((\d\d \w\w\w \d\d\d\d)\)\s*$/
+
+## Setup dates
+
+require 'date'
+require 'rubygems'
+require 'activesupport'
+
+# Keep old entries around for a week
+MONTH_AGO = Date.today << 1
+LAST_DATE = MONTH_AGO - 7
+
+def read_changelog(changelog, m, qpn)
+  for line in changelog do
+    if line =~ NEW_RE
+      d = Date.parse($~[2])
+      # presume chronological order
+      return if d < LAST_DATE
+
+      if d <= MONTH_AGO
+        ebuild_file = File.join(REPO_LOCATION, qpn, $~[1] + '.ebuild')
+        if FileTest.exists?(ebuild_file)
+          atom = "=#{qpn.category}/#{$~[1]}"
+          dep_spec = Paludis::parse_user_package_dep_spec(atom, PALUDIS_ENV,[])
+          to_match = IN_REPOSITORY_GENTOO & Paludis::Generator::Matches.new(dep_spec, [])
+          pkg_id = PALUDIS_ENV[Paludis::Selection::RequireExactlyOne.new(to_match)][0]
+          kws = pkg_id.keywords_key
+          # Unknown EAPI if null
+          if kws
+            stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
+            if stable.length == 0
+              populate_item(m.items.new_item,pkg_id,d)
+              puts "#{atom} #{d} #{pkg_id}"
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 content = RSS::Maker.make('2.0') { |m|
   m.channel.title = "Unstable Ebuilds in Tree for a Month"
   m.channel.link = "http://gentoo.petteriraty.eu"
@@ -90,40 +120,12 @@ content = RSS::Maker.make('2.0') { |m|
   m.channel.managingEditor = mail
   m.channel.pubDate = Time.now
 
-  gen = Paludis::Generator::InRepository.new(repo_name)
-  env[Paludis::Selection::BestVersionOnly.new(gen)].each { |id|
-    path = File.join(repo_location, id.name, 'ChangeLog')
-    category = id.name.category
-    catch :done do
-      File.foreach(path) { |line|
-        if line =~ new_re
-          d = Date.parse($~[2])
-          # presume chronological order
-          throw :done if d < last_date
-
-          if d >= last_date and d <= month_ago
-            pn = id.name.package
-            ebuild_file = File.join(repo_location, category, pn, $~[1] + '.ebuild')
-            if FileTest.exists?(ebuild_file)
-              cat_pv = "#{category}/#{$~[1]}"
-              atom = "=#{cat_pv}"
-              dep_spec = Paludis::parse_user_package_dep_spec(atom, env,[])
-              to_match = gen & Paludis::Generator::Matches.new(dep_spec, [])
-              pkg_id = env[Paludis::Selection::RequireExactlyOne.new(to_match)][0]
-              kws = pkg_id.keywords_key
-              # Unknown EAPI if null
-              if kws
-                stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
-                if stable.length == 0
-                  populate_item(m.items.new_item,pkg_id,d)
-                  puts "#{atom} #{d} #{pkg_id}"
-                end
-              end
-            end
-          end
-        end
+  repo.category_names { |category|
+    repo.package_names(category) { |qpn|
+      File.open(File.join(REPO_LOCATION, qpn, 'ChangeLog')) { |c|
+        read_changelog(c, m, qpn)
       }
-    end
+    } 
   }
 }
 
