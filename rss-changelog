@@ -63,6 +63,25 @@ class Handler
   end
 end
 
+## Setup bug amount parser
+
+require 'hpricot'
+require 'open-uri'
+require 'cgi'
+
+$bug_titles = []
+
+['UNCONFIRMED','NEW','ASSIGNED','REOPENED'].each { |status|
+  doc = open("http://bugs.gentoo.org/data/cached/buglist-#{status}.html") { |f| Hpricot(f) }
+  doc.search('//li/a/em').each { |b|
+	  $bug_titles << CGI.unescapeHTML(b.inner_html)
+  }
+}
+
+def bug_count(atom)
+  $bug_titles.select { |b| b.include?(atom) }.length
+end
+
 ## Setup rss maker
 
 require 'rss/maker'
@@ -85,52 +104,54 @@ content = RSS::Maker.make('2.0') { |m|
     catch :done do
       File.open(path).each { |line|
         if line =~ new_re
-          begin
-            d = Date.parse($~[2])
-            # presume chronological order
-            throw :done if d < last_date
+          d = Date.parse($~[2])
+          # presume chronological order
+          throw :done if d < last_date
 
-            if d >= last_date and d <= month_ago
-              ebuild_file = File.join(repo_location, category, id.name.package, $~[1] + '.ebuild')
-              if FileTest.exists?(ebuild_file)
-                cat_pv = "#{category}/#{$~[1]}"
-                atom = "=#{cat_pv}"
-                dep_spec = Paludis::parse_user_package_dep_spec(atom, env,[])
-                pkg_id = env[Paludis::Selection::RequireExactlyOne.new(gen & Paludis::Generator::Matches.new(dep_spec))][0]
-                kws = pkg_id.keywords_key
-                # Unknown EAPI if null
-                if kws
-                  stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
-                  if stable.length == 0
-                    # Parse metadata for maintainers
-                    metadata = File.join(repo_location,id.name, 'metadata.xml')
-                    handler = Handler.new
-                    REXML::Document.parse_stream(File.new(metadata),handler);
+          if d >= last_date and d <= month_ago
+            pn = id.name.package
+            ebuild_file = File.join(repo_location, category, pn, $~[1] + '.ebuild')
+            if FileTest.exists?(ebuild_file)
+              cat_pv = "#{category}/#{$~[1]}"
+              atom = "=#{cat_pv}"
+              dep_spec = Paludis::parse_user_package_dep_spec(atom, env,[])
+              to_match = gen & Paludis::Generator::Matches.new(dep_spec, [])
+              pkg_id = env[Paludis::Selection::RequireExactlyOne.new(to_match)][0]
+              kws = pkg_id.keywords_key
+              # Unknown EAPI if null
+              if kws
+                stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
+                if stable.length == 0
+                  # Parse metadata for maintainers
+                  metadata = File.join(repo_location,id.name, 'metadata.xml')
+                  handler = Handler.new
+                  REXML::Document.parse_stream(File.new(metadata),handler);
 
-                    i = m.items.new_item
-                    i.title = cat_pv
-                    # add month for the date
-                    i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
-                    i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
-                    i.guid.isPermaLink = "false"
-                    i.description = <<-EOF
-                      Added to tree:<br/>
-                      #{d}<br />
-                      Herds:<br />
-                      #{handler.herds.join(' ')}<br />
-                      Maintainers:<br />
-                      #{handler.maintainers.join(' ')}<br />
-                      Open bugs:<br />
-                      <a href="https://bugs.gentoo.org/buglist.cgi?quicksearch=#{id.name.package}">
-                      Quick Seach #{id.name.package} on bugs.gentoo.org
-                      </a>
-                    EOF
-                    puts "#{atom} #{d} #{pkg_id}"
-                  end
+                  cat_pn = category + '/' + pn
+                  i = m.items.new_item
+                  i.title = cat_pv
+                  # add month for the date
+                  i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
+                  i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
+                  i.guid.isPermaLink = "false"
+                  cat_bugs = bug_count(cat_pn)
+                  pn_bugs = bug_count(pn)
+                  i.description = <<-EOF
+                    Added to tree:<br/>
+                    #{d}<br />
+                    Herds:<br />
+                    #{handler.herds.join(' ')}<br />
+                    Maintainers:<br />
+                    #{handler.maintainers.join(' ')}<br />
+                    Open bugs for #{cat_pn}:<br />
+                    #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
+                    Open bugs for #{pn}:<br />
+                    #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
+                  EOF
+                  puts "#{atom} #{d} #{pkg_id}"
                 end
               end
             end
-          rescue ArgumentError
           end
         end
       }
