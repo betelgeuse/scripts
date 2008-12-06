@@ -52,6 +52,33 @@ end
 
 require 'rss/maker'
 
+def populate_item(i, pid,d)
+  pn = pid.name.package
+  cat_pn = pid.name.category + '/' + pn
+  i.title = "#{cat_pn}-#{pid.version.to_s}"
+  # add month for the date
+  i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
+  i.guid.content = "#{pid}/#{d.to_formatted_s(:number)}"
+  i.guid.isPermaLink = "false"
+  cat_bugs = bug_count(cat_pn)
+  pn_bugs = bug_count(pn)
+  herds = pid['herds']
+  maintainers = pid['maintainers']
+
+  i.description = <<-EOF
+    Added to tree:<br/>
+    #{d}<br />
+    Herds:<br />
+    #{herds.value.join(' ') if herds}<br />
+    Maintainers:<br />
+    #{maintainers.value.join(' ') if maintainers}<br />
+    Open bugs for #{cat_pn}:<br />
+    #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
+    Open bugs for #{pn}:<br />
+    #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
+  EOF
+end
+
 content = RSS::Maker.make('2.0') { |m|
   m.channel.title = "Unstable Ebuilds in Tree for a Month"
   m.channel.link = "http://gentoo.petteriraty.eu"
@@ -88,30 +115,7 @@ content = RSS::Maker.make('2.0') { |m|
               if kws
                 stable = kws.value.delete_if { |kw| kw[0] == ?~ or kw[0] == ?- }
                 if stable.length == 0
-                  cat_pn = category + '/' + pn
-                  i = m.items.new_item
-                  i.title = cat_pv
-                  # add month for the date
-                  i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
-                  i.guid.content = "#{pkg_id}/#{d.to_formatted_s(:number)}"
-                  i.guid.isPermaLink = "false"
-                  cat_bugs = bug_count(cat_pn)
-                  pn_bugs = bug_count(pn)
-                  herds = pkg_id['herds']
-                  maintainers = pkg_id['maintainers']
-
-                  i.description = <<-EOF
-                    Added to tree:<br/>
-                    #{d}<br />
-                    Herds:<br />
-                    #{herds.value.join(' ') if herds}<br />
-                    Maintainers:<br />
-                    #{maintainers.value.join(' ') if maintainers}<br />
-                    Open bugs for #{cat_pn}:<br />
-                    #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
-                    Open bugs for #{pn}:<br />
-                    #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
-                  EOF
+                  populate_item(m.items.new_item,pkg_id,d)
                   puts "#{atom} #{d} #{pkg_id}"
                 end
               end
