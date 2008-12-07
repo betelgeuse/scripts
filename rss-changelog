@@ -45,8 +45,11 @@ def populate_item(i, pid,d)
   cat_pn = pid.name.category + '/' + pn
   i.title = "#{cat_pn}-#{pid.version.to_s}"
   # add month for the date
-  i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
-  i.guid.content = "#{pid}/#{d.to_formatted_s(:number)}"
+  # To avoid loading activesupport having these manually here
+  #i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
+  #i.guid.content = "#{pid}/#{d.to_formatted_s(:number)}"
+  i.date = (d >> 1).strftime('%a, %d %b %Y %H:%M:%S %z')
+  i.guid.content = "#{pid}/#{d.strftime('%Y%m%d')}"
   i.guid.isPermaLink = "false"
   cat_bugs = bug_count(cat_pn)
   pn_bugs = bug_count(pn)
@@ -73,8 +76,6 @@ NEW_RE = /^\*([^\(]+) \((\d\d \w\w\w \d\d\d\d)\)\s*$/
 ## Setup dates
 
 require 'date'
-require 'rubygems'
-require 'activesupport'
 
 # Keep old entries around for a week
 MONTH_AGO = Date.today << 1
