@@ -19,6 +19,7 @@ IN_REPOSITORY_GENTOO = Paludis::Generator::InRepository.new(REPO_NAME)
 
 ## Setup bug amount parser
 
+require 'rubygems'
 require 'hpricot'
 require 'open-uri'
 require 'cgi'
