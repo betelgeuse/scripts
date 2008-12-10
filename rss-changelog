@@ -57,16 +57,11 @@ def populate_item(i, pid,d)
   maintainers = pid['maintainers']
 
   i.description = <<-EOF
-    Added to tree:<br/>
-    #{d}<br />
-    Herds:<br />
-    #{herds.value.join(' ') if herds}<br />
-    Maintainers:<br />
-    #{maintainers.value.join(' ') if maintainers}<br />
-    Open bugs for #{cat_pn}:<br />
-    #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
-    Open bugs for #{pn}:<br />
-    #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
+    Added to tree: #{d}<br/>
+    Herds: #{herds.value.join(', ') if herds}<br />
+    Maintainers: #{maintainers.value.join(', ') if maintainers}<br />
+    Open bugs for #{cat_pn}: #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
+    Open bugs for #{pn}: #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
   EOF
 end
 
