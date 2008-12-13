@@ -13,9 +13,22 @@ require 'Paludis'
 Paludis::Log.instance.log_level = Paludis::LogLevel::Warning
 PALUDIS_ENV = Paludis::NoConfigEnvironment.new('/usr/portage', '/var/cache/paludis/metadata/')
 REPO_NAME = 'gentoo'
-repo = PALUDIS_ENV.package_database.fetch_repository(REPO_NAME)
-REPO_LOCATION = repo['location'].value
+REPOSITORY = PALUDIS_ENV.package_database.fetch_repository(REPO_NAME)
+REPO_LOCATION = REPOSITORY['location'].value
 IN_REPOSITORY_GENTOO = Paludis::Generator::InRepository.new(REPO_NAME)
+
+## Setup URI handling
+# IMHO ruby standard library should provide this
+
+require 'uri/https'
+
+def build_uri(args)
+    params = []
+    h = args[:query]
+    h.each_pair { |k,v| params << "#{k}=#{URI.escape(v)}" }
+    args[:query] = params.join('&')
+    URI::HTTPS.build2(args)
+end
 
 ## Setup bug amount parser
 
@@ -54,15 +67,45 @@ def populate_item(i, pid,d)
   i.guid.isPermaLink = "false"
   cat_bugs = bug_count(cat_pn)
   pn_bugs = bug_count(pn)
+
   herds = pid['herds']
+  herds = "Herds: #{herds.value.join(', ') if herds}"
+
   maintainers = pid['maintainers']
+  maintainers = "Maintainers: #{maintainers.value.join(', ') if maintainers}"
+
+  comment = <<-EOF
+    How much have you used the package in question?
+
+
+    Have you had any problems with the package?
+
+
+    emerge --info:
+
+
+    Info for bug wranglers:
+    #{herds}
+    #{maintainers}
+    Open bugs for #{cat_pn}: #{cat_bugs}
+    Open bugs for #{pn}: #{pn_bugs}
+  EOF
 
   i.description = <<-EOF
     Added to tree: #{d}<br/>
-    Herds: #{herds.value.join(', ') if herds}<br />
-    Maintainers: #{maintainers.value.join(', ') if maintainers}<br />
+    #{herds} <br />
+    #{maintainers}<br />
     Open bugs for #{cat_pn}: #{cat_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{cat_pn}\">Show</a>" if cat_bugs > 0}<br />
     Open bugs for #{pn}: #{pn_bugs} #{"<a href=\"https://bugs.gentoo.org/buglist.cgi?quicksearch=#{pn}\">Show</a>" if pn_bugs > 0}<br />
+    <a href="#{build_uri(
+      :host => 'bugs.gentoo.org',
+      :path => '/enter_bug.cgi',
+      :query => {
+        :product => 'Gentoo Linux',
+        :short_desc => "Stable request for #{i.title}",
+        :comment => comment,
+        :keywords => 'STABLEREQ'
+      })}">File bug </a>
   EOF
 end
 
@@ -117,12 +160,12 @@ content = RSS::Maker.make('2.0') { |m|
   m.channel.managingEditor = mail
   m.channel.pubDate = Time.now
 
-  repo.category_names { |category|
-    repo.package_names(category) { |qpn|
+  REPOSITORY.category_names { |category|
+    REPOSITORY.package_names(category) { |qpn|
       File.open(File.join(REPO_LOCATION, qpn, 'ChangeLog')) { |c|
         read_changelog(c, m, qpn)
       }
-    } 
+    }
   }
 }
 
