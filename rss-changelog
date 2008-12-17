@@ -74,22 +74,22 @@ def populate_item(i, pid,d)
   maintainers = pid['maintainers']
   maintainers = "Maintainers: #{maintainers.value.join(', ') if maintainers}"
 
-  comment = <<-EOF
-    How much have you used the package in question?
+  comment = <<EOF
+This bug was filed via: http://gentoo.petteriraty.eu/stable.rss
+
+How much have you used the package in question?
+
+Have you had any problems with the package?
+
+emerge --info:
 
 
-    Have you had any problems with the package?
-
-
-    emerge --info:
-
-
-    Info for bug wranglers:
-    #{herds}
-    #{maintainers}
-    Open bugs for #{cat_pn}: #{cat_bugs}
-    Open bugs for #{pn}: #{pn_bugs}
-  EOF
+Info for bug wranglers:
+#{herds}
+#{maintainers}
+Open bugs for #{cat_pn}: #{cat_bugs}
+Open bugs for #{pn}: #{pn_bugs}
+EOF
 
   i.description = <<-EOF
     Added to tree: #{d}<br/>
