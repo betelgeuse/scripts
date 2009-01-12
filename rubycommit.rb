@@ -12,7 +12,7 @@ system("cvs diff")
 puts "Exit status: " + $?.to_s
 $? == 2 && exit
 
-system('FEATURES="-strict" repoman full')
+system('FEATURES="-strict" repoman -d full')
 puts "Exit status: " + $?.to_s
 $? != 0 && exit
 
