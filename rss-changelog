@@ -89,6 +89,7 @@ Info for bug wranglers:
 #{maintainers}
 Open bugs for #{cat_pn}: #{cat_bugs}
 Open bugs for #{pn}: #{pn_bugs}
+Keywords: #{pid.keywords_key.value.join(' ')}
 EOF
 
   i.description = <<-EOF
