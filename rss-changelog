@@ -62,7 +62,8 @@ def populate_item(i, pid,d)
   # To avoid loading activesupport having these manually here
   #i.date = (d >> 1).to_datetime.to_formatted_s(:rfc822)
   #i.guid.content = "#{pid}/#{d.to_formatted_s(:number)}"
-  i.date = (d >> 1).strftime('%a, %d %b %Y %H:%M:%S %z')
+  #i.date = (d >> 1).strftime('%a, %d %b %Y %H:%M:%S %z')
+  i.date = Time.parse((d >> 1).to_s)
   i.guid.content = "#{pid}/#{d.strftime('%Y%m%d')}"
   i.guid.isPermaLink = "false"
   cat_bugs = bug_count(cat_pn)
