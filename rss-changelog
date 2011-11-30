@@ -39,7 +39,7 @@ require 'cgi'
 
 $bug_titles = []
 
-['UNCONFIRMED','NEW','ASSIGNED','REOPENED'].each { |status|
+['UNCONFIRMED','CONFIRMED','IN_PROGRESS'].each { |status|
   doc = open("http://bugs.gentoo.org/data/cached/buglist-#{status}.html") { |f| Hpricot(f) }
   doc.search('//li/a/em').each { |b|
 	  $bug_titles << CGI.unescapeHTML(b.inner_html)
